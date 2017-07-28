@@ -311,6 +311,23 @@ class PlanningGraph():
         #   to see if a proposed PgNode_a has prenodes that are a subset of the previous S level.  Once an
         #   action node is added, it MUST be connected to the S node instances in the appropriate s_level set.
 
+        curr_a_list = []
+        # the A0 level will iterate through all possible actions for the problem
+        for action in self.all_actions:
+            curr_a = PgNode_a(action)
+            prev_s_set = self.s_levels[level]
+            # if all prerequisite literals for the action hold in S0
+            # This can be accomplished by testing to see if a proposed PgNode_a has prenodes that are a subset of the previous S level
+            if curr_a.prenodes.issubset(prev_s_set):
+                # add a PgNode_a to a_levels[0] set
+                curr_a_list.append(curr_a)
+                # Once an action node is added, it MUST be connected to the S node instances in the appropriate s_level set.
+                for prev_s in prev_s_set:
+                    prev_s.children.add(curr_a)
+                    curr_a.parents.add(prev_s)
+
+        self.a_levels.append(curr_a_list)
+
     def add_literal_level(self, level):
         """ add an S (literal) level to the Planning Graph
 
@@ -328,6 +345,21 @@ class PlanningGraph():
         #   may be "added" to the set without fear of duplication.  However, it is important to then correctly create and connect
         #   all of the new S nodes as children of all the A nodes that could produce them, and likewise add the A nodes to the
         #   parent sets of the S nodes
+
+        # Since we are working with sets, they may be "added" to the set without fear of duplication.
+        curr_s_set = set()
+        # every A node in the previous level
+        for prev_a in self.a_levels[level-1]:
+            # a list of S nodes in effnodes that represent the effect produced by the action.
+            for curr_s in prev_a.effnodes:
+                # These literals will all be part of the new S level.
+                curr_s_set.add(curr_s)
+                # connect all of the new S nodes as children of all the A nodes that could produce them
+                prev_a.children.add(curr_s)
+                # add the A nodes to the parent sets of the S nodes
+                curr_s.parents.add(prev_a)
+        
+        self.s_levels.append(curr_s_set)
 
     def update_a_mutex(self, nodeset):
         """ Determine and update sibling mutual exclusion for A-level nodes
@@ -386,6 +418,17 @@ class PlanningGraph():
         :return: bool
         """
         # TODO test for Inconsistent Effects between nodes
+
+        a1 = node_a1.action
+        a2 = node_a2.action
+        # Check if action 1 negates an effect of action 2
+        for effect_rem1 in a1.effect_rem:
+            if effect_rem1 in a2.effect_add:
+                return True
+        # Check if action 2 negates an effect of action 1
+        for effect_rem2 in a2.effect_rem:
+            if effect_rem2 in a1.effect_add:
+                return True
         return False
 
     def interference_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
@@ -403,6 +446,26 @@ class PlanningGraph():
         :return: bool
         """
         # TODO test for Interference between nodes
+
+        a1 = node_a1.action
+        a2 = node_a2.action
+        # Check if an effect of action 1 is the negation of a precondition of action 2
+        for effect_add1 in a1.effect_add:
+            if effect_add1 in a2.precond_neg:
+                return True
+        # Check if an effect of action 2 is the negation of a precondition of action 1
+        for effect_add2 in a2.effect_add:
+            if effect_add2 in a1.precond_neg:
+                return True
+
+        # Check if the negation of an effect of action 1 is a precondition of action 2
+        for effect_rem1 in a1.effect_rem:
+            if effect_rem1 in a2.precond_pos:
+                return True
+        # Check if the negation of an effect of action 2 is a precondition of action 1
+        for effect_rem2 in a2.effect_rem:
+            if effect_rem2 in a1.precond_pos:
+                return True
         return False
 
     def competing_needs_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
@@ -417,6 +480,12 @@ class PlanningGraph():
         """
 
         # TODO test for Competing Needs between nodes
+
+        for precond1 in node_a1.parents:
+            for precond2 in node_a2.parents:
+                # Check if a precondition of action 1 is mutex with a precondition of action 2
+                if precond1.is_mutex(precond2):
+                    return True
         return False
 
     def update_s_mutex(self, nodeset: set):
@@ -452,7 +521,9 @@ class PlanningGraph():
         :return: bool
         """
         # TODO test for negation between nodes
-        return False
+
+        # Check symbol and also positive/negative
+        return node_s1.symbol == node_s2.symbol and node_s1.is_pos != node_s2.is_pos
 
     def inconsistent_support_mutex(self, node_s1: PgNode_s, node_s2: PgNode_s):
         """
@@ -471,7 +542,16 @@ class PlanningGraph():
         :return: bool
         """
         # TODO test for Inconsistent Support between nodes
-        return False
+
+        for action1 in node_s1.parents:
+            #print("action1:", action1)
+            for action2 in node_s2.parents:
+                #print("action2:", action2)
+                # Check if action 1 is mutex with action 2
+                if not action1.is_mutex(action2):
+                    # If one of actions is not mutex with the other, return False
+                    return False
+        return True
 
     def h_levelsum(self) -> int:
         """The sum of the level costs of the individual goals (admissible if goals independent)
@@ -481,4 +561,29 @@ class PlanningGraph():
         level_sum = 0
         # TODO implement
         # for each goal in the problem, determine the level cost, then add them together
+        # Ref: https://discussions.udacity.com/t/how-to-calculate-h-levelsum/264545/6
+        # Ref: https://discussions.udacity.com/t/error-while-running-unittest-tests-test-my-planning-graph/252987/4
+        #print("self.s_levels=",self.s_levels)
+        for goal in self.problem.goal:
+            #print("++++++++++++++++++++++++++++++++")
+            #print("target goal=", goal)
+            goal_appears = False
+            for level in range(len(self.s_levels)):
+                #print("level=", level)
+                for state in self.s_levels[level]:
+                    state_expr = state.symbol
+                    if not state.is_pos:
+                        # If negative, invert Expr
+                        # See Expr class in aimacode/utils.py
+                        state_expr = state.symbol.__invert__()
+                    #print("state.symbol=", state.symbol, ", state.is_pos=", state.is_pos, ", state_expr:", state_expr)
+
+                    if expr(goal) == state_expr:
+                        #print("goal is found:", goal)
+                        level_sum += level
+                        goal_appears = True
+                        break
+                if goal_appears:
+                    break
+
         return level_sum

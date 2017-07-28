@@ -225,6 +225,15 @@ class AirCargoProblem(Problem):
         return count
 
 def air_cargo_p1() -> AirCargoProblem:
+    # Problem 1 initial state and goal:
+    # ---------------------------------
+    # Init(At(C1, SFO) ∧ At(C2, JFK) 
+	#    ∧ At(P1, SFO) ∧ At(P2, JFK) 
+	#    ∧ Cargo(C1) ∧ Cargo(C2) 
+	#    ∧ Plane(P1) ∧ Plane(P2)
+	#    ∧ Airport(JFK) ∧ Airport(SFO))
+    # Goal(At(C1, JFK) ∧ At(C2, SFO))
+    # ---------------------------------
     cargos = ['C1', 'C2']
     planes = ['P1', 'P2']
     airports = ['JFK', 'SFO']
@@ -251,6 +260,16 @@ def air_cargo_p1() -> AirCargoProblem:
 
 def air_cargo_p2() -> AirCargoProblem:
     # TODO implement Problem 2 definition
+
+    # Problem 2 initial state and goal:
+    # ---------------------------------
+    # Init(At(C1, SFO) ∧ At(C2, JFK) ∧ At(C3, ATL) 
+	#    ∧ At(P1, SFO) ∧ At(P2, JFK) ∧ At(P3, ATL) 
+	#    ∧ Cargo(C1) ∧ Cargo(C2) ∧ Cargo(C3)
+	#    ∧ Plane(P1) ∧ Plane(P2) ∧ Plane(P3)
+	#    ∧ Airport(JFK) ∧ Airport(SFO) ∧ Airport(ATL))
+    # Goal(At(C1, JFK) ∧ At(C2, SFO) ∧ At(C3, SFO))
+    # ---------------------------------
     cargos = ['C1', 'C2', 'C3']
     planes = ['P1', 'P2', 'P3']
     airports = ['JFK', 'SFO', 'ATL']
@@ -293,6 +312,16 @@ def air_cargo_p2() -> AirCargoProblem:
 
 def air_cargo_p3() -> AirCargoProblem:
     # TODO implement Problem 3 definition
+
+    # Problem 3 initial state and goal:
+    # ---------------------------------
+    # Init(At(C1, SFO) ∧ At(C2, JFK) ∧ At(C3, ATL) ∧ At(C4, ORD) 
+	#    ∧ At(P1, SFO) ∧ At(P2, JFK) 
+	#    ∧ Cargo(C1) ∧ Cargo(C2) ∧ Cargo(C3) ∧ Cargo(C4)
+	#    ∧ Plane(P1) ∧ Plane(P2)
+	#    ∧ Airport(JFK) ∧ Airport(SFO) ∧ Airport(ATL) ∧ Airport(ORD))
+    # Goal(At(C1, JFK) ∧ At(C3, JFK) ∧ At(C2, SFO) ∧ At(C4, SFO))
+    # ---------------------------------
     cargos = ['C1', 'C2', 'C3', 'C4']
     planes = ['P1', 'P2']
     airports = ['JFK', 'SFO', 'ATL', 'ORD']
